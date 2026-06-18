@@ -3,7 +3,7 @@ import Combine
 
 @MainActor
 final class MenuBarController: NSObject {
-    private let statusItem = NSStatusBar.system.statusItem(withLength: 32)
+    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let settingsStore: SettingsStore
     private let mouseEventManager: MouseEventManager
     private let settingsWindowController: SettingsWindowController
@@ -19,31 +19,37 @@ final class MenuBarController: NSObject {
         configureStatusItem()
         configureMenu()
         observeSettings()
+        updateStatusItemAppearance()
     }
 
     private func configureStatusItem() {
-        statusItem.length = 32
+        statusItem.length = NSStatusItem.squareLength
 
         guard let button = statusItem.button else {
             return
         }
 
-        let image = NSImage(systemSymbolName: "computermouse", accessibilityDescription: "MousePilot")
-            ?? NSImage(systemSymbolName: "cursorarrow", accessibilityDescription: "MousePilot")
-
-        if let image {
-            image.isTemplate = true
-            button.image = image
-            button.imagePosition = .imageOnly
-        } else {
-            button.title = "MP"
-        }
-
+        button.title = ""
+        button.attributedTitle = NSAttributedString(string: "")
+        button.imagePosition = .imageOnly
+        button.imageScaling = .scaleProportionallyDown
+        button.isBordered = false
+        button.wantsLayer = false
+        button.contentTintColor = nil
+        button.state = .off
         button.toolTip = "MousePilot"
+        button.target = self
+        button.action = #selector(statusItemClicked(_:))
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
     }
 
     private func configureMenu() {
-        let openItem = NSMenuItem(title: "Open MousePilot", action: #selector(openMousePilot), keyEquivalent: "")
+        let titleItem = NSMenuItem(title: "MousePilot", action: nil, keyEquivalent: "")
+        titleItem.isEnabled = false
+        menu.addItem(titleItem)
+        menu.addItem(.separator())
+
+        let openItem = NSMenuItem(title: "Open MousePilot", action: #selector(openSettingsWindowFromMenu), keyEquivalent: "")
         openItem.target = self
         menu.addItem(openItem)
 
@@ -56,25 +62,79 @@ final class MenuBarController: NSObject {
         let quitItem = NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
-
-        statusItem.menu = menu
-        updateStartStopTitle()
     }
 
     private func observeSettings() {
         settingsStore.$settings
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.updateStartStopTitle()
+                self?.updateStatusItemAppearance()
             }
             .store(in: &cancellables)
     }
 
-    private func updateStartStopTitle() {
-        startStopItem.title = settingsStore.settings.isEnabled ? "Stop" : "Start"
+    private func updateStatusItemAppearance() {
+        let enabled = settingsStore.settings.isEnabled
+
+        if let button = statusItem.button {
+            button.title = ""
+            button.attributedTitle = NSAttributedString(string: "")
+            button.image = makeStatusImage()
+            button.imagePosition = .imageOnly
+            button.imageScaling = .scaleProportionallyDown
+            button.isBordered = false
+            button.wantsLayer = false
+            button.contentTintColor = nil
+            button.state = .off
+            button.toolTip = enabled ? "MousePilot - Enabled" : "MousePilot - Stopped"
+        }
+
+        startStopItem.title = enabled ? "Stop" : "Start"
     }
 
-    @objc private func openMousePilot() {
+    private func makeStatusImage() -> NSImage? {
+        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .regular)
+        let image = NSImage(systemSymbolName: "computermouse", accessibilityDescription: "MousePilot")?
+            .withSymbolConfiguration(config)
+            ?? NSImage(systemSymbolName: "cursorarrow", accessibilityDescription: "MousePilot")?
+            .withSymbolConfiguration(config)
+        image?.isTemplate = true
+        return image
+    }
+
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        guard let event = NSApp.currentEvent else {
+            openSettingsWindow()
+            return
+        }
+
+        if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
+            showMenu()
+        } else {
+            openSettingsWindow()
+        }
+    }
+
+    private func showMenu() {
+        updateStatusItemAppearance()
+
+        guard let button = statusItem.button else {
+            return
+        }
+
+        let location = NSPoint(x: 0, y: button.bounds.height)
+        menu.popUp(positioning: nil, at: location, in: button)
+        button.state = .off
+        button.highlight(false)
+    }
+
+    @objc private func openSettingsWindowFromMenu() {
+        openSettingsWindow()
+    }
+
+    private func openSettingsWindow() {
         settingsWindowController.showWindow()
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc private func toggleEnabled() {
@@ -87,7 +147,7 @@ final class MenuBarController: NSObject {
             mouseEventManager.stop()
         }
 
-        updateStartStopTitle()
+        updateStatusItemAppearance()
     }
 
     @objc private func quit() {

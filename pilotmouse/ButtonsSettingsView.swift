@@ -4,28 +4,31 @@ struct ButtonsSettingsView: View {
     @ObservedObject var settingsStore: SettingsStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             sectionHeader
 
-            VStack(spacing: 8) {
-                ForEach(MouseButtonDefinition.all) { button in
-                    buttonRow(button)
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    ForEach(MouseButtonDefinition.all) { button in
+                        buttonRow(button)
+                    }
                 }
+                .frame(maxWidth: .infinity)
             }
-
-            Spacer()
         }
         .padding(.top, 12)
         .padding(.horizontal, 4)
+        .background(AppColors.windowBackground)
     }
 
     private var sectionHeader: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Buttons")
                 .font(.headline)
-            Text("Assign global actions to extra mouse buttons. Left and right click stay protected.")
+            Text("Assign global actions to extra mouse buttons. Left and right click stay protected. Button 4 and Button 5 are commonly used for Back and Forward.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -38,33 +41,33 @@ struct ButtonsSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            .frame(width: 170, alignment: .leading)
+            .frame(width: 180, alignment: .leading)
+
+            Spacer(minLength: 12)
 
             if button.isRemappable {
                 Picker("Action", selection: actionBinding(for: button.buttonNumber)) {
-                    ForEach(MouseAction.allCases) { action in
+                    ForEach(MouseAction.stableActions) { action in
                         Text(action.displayName).tag(action)
                     }
                 }
                 .labelsHidden()
-                .frame(maxWidth: 260)
-
-                if !settingsStore.action(for: button.buttonNumber).isImplemented {
-                    Text("TODO")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                .frame(width: 260)
             } else {
                 Text(MouseAction.defaultClick.displayName)
                     .foregroundStyle(.secondary)
-                Spacer()
+                    .frame(width: 180, alignment: .leading)
+
                 Text("Protected")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .frame(width: 70, alignment: .trailing)
             }
         }
-        .padding(10)
-        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .frame(maxWidth: .infinity)
+        .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8))
     }
 
     private func actionBinding(for buttonNumber: Int) -> Binding<MouseAction> {

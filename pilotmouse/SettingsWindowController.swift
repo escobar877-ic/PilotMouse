@@ -6,12 +6,16 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let settingsStore: SettingsStore
     private let permissionsManager: PermissionsManager
     private let mouseEventManager: MouseEventManager
+    private let pointerController: PointerController
+    private let themeManager: ThemeManager
     private var window: NSWindow?
 
-    init(settingsStore: SettingsStore, permissionsManager: PermissionsManager, mouseEventManager: MouseEventManager) {
+    init(settingsStore: SettingsStore, permissionsManager: PermissionsManager, mouseEventManager: MouseEventManager, pointerController: PointerController, themeManager: ThemeManager) {
         self.settingsStore = settingsStore
         self.permissionsManager = permissionsManager
         self.mouseEventManager = mouseEventManager
+        self.pointerController = pointerController
+        self.themeManager = themeManager
     }
 
     func showWindow() {
@@ -21,18 +25,42 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             let contentView = ContentView(
                 settingsStore: settingsStore,
                 permissionsManager: permissionsManager,
-                mouseEventManager: mouseEventManager
+                mouseEventManager: mouseEventManager,
+                pointerController: pointerController,
+                themeManager: themeManager
             )
-            let hostingController = NSHostingController(rootView: contentView)
-            let settingsWindow = NSWindow(contentViewController: hostingController)
+            let rootView = contentView
+                .frame(minWidth: 780, idealWidth: 860, minHeight: 560, idealHeight: 640)
+            let hostingController = NSHostingController(rootView: rootView)
+            let settingsWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+                backing: .buffered,
+                defer: false
+            )
+            settingsWindow.contentViewController = hostingController
             settingsWindow.title = "MousePilot"
-            settingsWindow.setContentSize(NSSize(width: 620, height: 520))
-            settingsWindow.minSize = NSSize(width: 600, height: 500)
-            settingsWindow.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            settingsWindow.titleVisibility = .hidden
+            settingsWindow.titlebarAppearsTransparent = true
+            settingsWindow.backgroundColor = .windowBackgroundColor
+            settingsWindow.isOpaque = true
+            settingsWindow.minSize = NSSize(width: 780, height: 560)
+            settingsWindow.setContentSize(NSSize(width: 860, height: 640))
+            settingsWindow.setFrameAutosaveName("MousePilotSettingsWindowV3")
             settingsWindow.isReleasedWhenClosed = false
             settingsWindow.delegate = self
             settingsWindow.center()
+            themeManager.applyTheme(settingsStore.settings.appTheme, to: settingsWindow)
             window = settingsWindow
+        }
+
+        if let window {
+            themeManager.applyTheme(settingsStore.settings.appTheme, to: window)
+
+            if window.frame.width < 780 || window.frame.height < 560 {
+                window.setContentSize(NSSize(width: 860, height: 640))
+                window.center()
+            }
         }
 
         window?.makeKeyAndOrderFront(nil)

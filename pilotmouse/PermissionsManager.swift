@@ -1,37 +1,144 @@
 import AppKit
 import ApplicationServices
 import Combine
+import CoreGraphics
+
+struct MousePilotPermissionStatus: Equatable {
+    var accessibilityTrusted: Bool
+    var listenEventAccess: Bool
+
+    var postShortcutActions: Bool {
+        accessibilityTrusted
+    }
+
+    var canUseEventTap: Bool {
+        accessibilityTrusted || listenEventAccess
+    }
+
+    var canPostActions: Bool {
+        accessibilityTrusted
+    }
+
+    var isReady: Bool {
+        canUseEventTap && canPostActions
+    }
+}
 
 @MainActor
 final class PermissionsManager: ObservableObject {
-    @Published private(set) var isTrusted = AXIsProcessTrusted()
+    @Published private(set) var status: MousePilotPermissionStatus
 
-    func refresh() {
-        isTrusted = AXIsProcessTrusted()
+    var onTrustChanged: ((Bool) -> Void)?
+
+    var isTrusted: Bool {
+        status.isReady
     }
 
-    func requestPermissionIfNeeded() {
-        guard !isTrusted else {
+    var currentBundleIdentifier: String {
+        Bundle.main.bundleIdentifier ?? "Unknown bundle identifier"
+    }
+
+    var currentAppPath: String {
+        Bundle.main.bundleURL.path
+    }
+
+    private var refreshTimer: Timer?
+
+    init() {
+        self.status = Self.readStatus()
+    }
+
+    deinit {
+        refreshTimer?.invalidate()
+    }
+
+    func refresh() {
+        updateStatus(Self.readStatus())
+    }
+
+    func startMonitoring() {
+        refresh()
+
+        guard refreshTimer == nil else {
             return
         }
 
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refresh()
+            }
+        }
+    }
+
+    func stopMonitoring() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+
+    func requestPermissionIfNeeded() {
+        requestAccessibilityPermission()
+        requestListenEventPermission()
         refresh()
     }
 
+    func requestAccessibilityPermission() {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        _ = AXIsProcessTrustedWithOptions(options)
+    }
+
+    func requestListenEventPermission() {
+        if !CGPreflightListenEventAccess() {
+            _ = CGRequestListenEventAccess()
+        }
+    }
+
     func openAccessibilitySettings() {
-        let urls = [
+        openSystemSettings(urls: [
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
             "x-apple.systempreferences:com.apple.preference.security",
             "x-apple.systempreferences:"
-        ]
+        ])
+    }
 
+    func openInputMonitoringSettings() {
+        openSystemSettings(urls: [
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent",
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_InputMonitoring",
+            "x-apple.systempreferences:com.apple.preference.security",
+            "x-apple.systempreferences:"
+        ])
+    }
+
+    func revealCurrentBuildInFinder() {
+        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+    }
+
+    private func openSystemSettings(urls: [String]) {
         for urlString in urls {
             guard let url = URL(string: urlString) else { continue }
             if NSWorkspace.shared.open(url) {
                 return
             }
         }
+    }
+
+    private func updateStatus(_ newStatus: MousePilotPermissionStatus) {
+        let wasTrusted = status.isReady
+        guard newStatus != status else {
+            return
+        }
+
+        status = newStatus
+
+        if wasTrusted != newStatus.isReady {
+            onTrustChanged?(newStatus.isReady)
+        }
+    }
+
+    private static func readStatus() -> MousePilotPermissionStatus {
+        MousePilotPermissionStatus(
+            accessibilityTrusted: AXIsProcessTrusted(),
+            listenEventAccess: CGPreflightListenEventAccess()
+        )
     }
 }

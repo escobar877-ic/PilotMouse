@@ -47,6 +47,44 @@ enum MouseAction: String, Codable, CaseIterable, Identifiable {
             false
         }
     }
+
+    static let stableActions: [MouseAction] = allCases.filter(\.isImplemented)
+}
+
+enum AppTheme: String, Codable, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .system: "System"
+        case .light: "Light"
+        case .dark: "Dark"
+        }
+    }
+}
+
+enum AppTab: String, Codable, CaseIterable, Identifiable {
+    case buttons
+    case wheel
+    case pointer
+    case permissions
+    case about
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .buttons: "Buttons"
+        case .wheel: "Wheel"
+        case .pointer: "Pointer"
+        case .permissions: "Permissions"
+        case .about: "About"
+        }
+    }
 }
 
 enum ScrollDirection: String, Codable, CaseIterable, Identifiable {
@@ -88,6 +126,8 @@ enum MiddleClickBehavior: String, Codable, CaseIterable, Identifiable {
         case .launchpad: .launchpad
         }
     }
+
+    static let stableBehaviors: [MiddleClickBehavior] = [.defaultClick, .missionControl, .appSwitcher]
 }
 
 struct ButtonMapping: Codable, Identifiable, Equatable {
@@ -118,6 +158,8 @@ struct MouseButtonDefinition: Identifiable, Equatable {
 
 struct AppSettings: Codable, Equatable {
     var isEnabled: Bool
+    var appTheme: AppTheme
+    var selectedTab: AppTab
     var buttonMappings: [ButtonMapping]
     var scrollDirection: ScrollDirection
     var verticalScrollSpeed: Double
@@ -128,9 +170,16 @@ struct AppSettings: Codable, Equatable {
     var pointerAccelerationEnabled: Bool
     var preciseModeEnabled: Bool
     var preciseModeSpeed: Double
+    var pointerControlEnabled: Bool
+    var mouseTrackingSpeed: Double
+    var mouseSpeedLevel: Double
+    var mouseAccelerationEnabled: Bool
+    var windowsLikeModeEnabled: Bool
 
     static let defaultSettings = AppSettings(
         isEnabled: true,
+        appTheme: .system,
+        selectedTab: .buttons,
         buttonMappings: [
             ButtonMapping(buttonNumber: 2, action: .defaultClick),
             ButtonMapping(buttonNumber: 3, action: .back),
@@ -147,15 +196,99 @@ struct AppSettings: Codable, Equatable {
         pointerSpeed: 1.0,
         pointerAccelerationEnabled: true,
         preciseModeEnabled: false,
-        preciseModeSpeed: 0.5
+        preciseModeSpeed: 0.5,
+        pointerControlEnabled: false,
+        mouseTrackingSpeed: 2.0,
+        mouseSpeedLevel: 50,
+        mouseAccelerationEnabled: true,
+        windowsLikeModeEnabled: false
     )
 
-    func action(for buttonNumber: Int) -> MouseAction {
+    static let `default`: AppSettings = defaultSettings
+
+    init(
+        isEnabled: Bool,
+        appTheme: AppTheme,
+        selectedTab: AppTab,
+        buttonMappings: [ButtonMapping],
+        scrollDirection: ScrollDirection,
+        verticalScrollSpeed: Double,
+        horizontalScrollSpeed: Double,
+        smoothScrollingEnabled: Bool,
+        middleClickBehavior: MiddleClickBehavior,
+        pointerSpeed: Double,
+        pointerAccelerationEnabled: Bool,
+        preciseModeEnabled: Bool,
+        preciseModeSpeed: Double,
+        pointerControlEnabled: Bool,
+        mouseTrackingSpeed: Double,
+        mouseSpeedLevel: Double,
+        mouseAccelerationEnabled: Bool,
+        windowsLikeModeEnabled: Bool
+    ) {
+        self.isEnabled = isEnabled
+        self.appTheme = appTheme
+        self.selectedTab = selectedTab
+        self.buttonMappings = buttonMappings
+        self.scrollDirection = scrollDirection
+        self.verticalScrollSpeed = verticalScrollSpeed
+        self.horizontalScrollSpeed = horizontalScrollSpeed
+        self.smoothScrollingEnabled = smoothScrollingEnabled
+        self.middleClickBehavior = middleClickBehavior
+        self.pointerSpeed = pointerSpeed
+        self.pointerAccelerationEnabled = pointerAccelerationEnabled
+        self.preciseModeEnabled = preciseModeEnabled
+        self.preciseModeSpeed = preciseModeSpeed
+        self.pointerControlEnabled = pointerControlEnabled
+        self.mouseTrackingSpeed = mouseTrackingSpeed
+        self.mouseSpeedLevel = mouseSpeedLevel
+        self.mouseAccelerationEnabled = mouseAccelerationEnabled
+        self.windowsLikeModeEnabled = windowsLikeModeEnabled
+    }
+
+    init(from decoder: Decoder) throws {
+        let defaults = AppSettings.defaultSettings
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? defaults.isEnabled
+        appTheme = try container.decodeIfPresent(AppTheme.self, forKey: .appTheme) ?? defaults.appTheme
+        selectedTab = try container.decodeIfPresent(AppTab.self, forKey: .selectedTab) ?? defaults.selectedTab
+        buttonMappings = try container.decodeIfPresent([ButtonMapping].self, forKey: .buttonMappings) ?? defaults.buttonMappings
+        scrollDirection = try container.decodeIfPresent(ScrollDirection.self, forKey: .scrollDirection) ?? defaults.scrollDirection
+        verticalScrollSpeed = try container.decodeIfPresent(Double.self, forKey: .verticalScrollSpeed) ?? defaults.verticalScrollSpeed
+        horizontalScrollSpeed = try container.decodeIfPresent(Double.self, forKey: .horizontalScrollSpeed) ?? defaults.horizontalScrollSpeed
+        smoothScrollingEnabled = try container.decodeIfPresent(Bool.self, forKey: .smoothScrollingEnabled) ?? defaults.smoothScrollingEnabled
+        middleClickBehavior = try container.decodeIfPresent(MiddleClickBehavior.self, forKey: .middleClickBehavior) ?? defaults.middleClickBehavior
+        pointerSpeed = try container.decodeIfPresent(Double.self, forKey: .pointerSpeed) ?? defaults.pointerSpeed
+        pointerAccelerationEnabled = try container.decodeIfPresent(Bool.self, forKey: .pointerAccelerationEnabled) ?? defaults.pointerAccelerationEnabled
+        preciseModeEnabled = try container.decodeIfPresent(Bool.self, forKey: .preciseModeEnabled) ?? defaults.preciseModeEnabled
+        preciseModeSpeed = try container.decodeIfPresent(Double.self, forKey: .preciseModeSpeed) ?? defaults.preciseModeSpeed
+        pointerControlEnabled = try container.decodeIfPresent(Bool.self, forKey: .pointerControlEnabled) ?? defaults.pointerControlEnabled
+        mouseTrackingSpeed = try container.decodeIfPresent(Double.self, forKey: .mouseTrackingSpeed) ?? defaults.mouseTrackingSpeed
+        mouseSpeedLevel = try container.decodeIfPresent(Double.self, forKey: .mouseSpeedLevel) ?? defaults.mouseSpeedLevel
+        mouseAccelerationEnabled = try container.decodeIfPresent(Bool.self, forKey: .mouseAccelerationEnabled) ?? defaults.mouseAccelerationEnabled
+        windowsLikeModeEnabled = try container.decodeIfPresent(Bool.self, forKey: .windowsLikeModeEnabled) ?? defaults.windowsLikeModeEnabled
+    }
+
+    func actionForButton(_ buttonNumber: Int) -> MouseAction {
         if buttonNumber == 2 {
             let mappedAction = buttonMappings.first { $0.buttonNumber == buttonNumber }?.action ?? .defaultClick
             return mappedAction == .defaultClick ? middleClickBehavior.action : mappedAction
         }
 
         return buttonMappings.first { $0.buttonNumber == buttonNumber }?.action ?? .defaultClick
+    }
+
+    func action(for buttonNumber: Int) -> MouseAction {
+        actionForButton(buttonNumber)
+    }
+
+    mutating func setAction(_ action: MouseAction, for buttonNumber: Int) {
+        guard let index = buttonMappings.firstIndex(where: { $0.buttonNumber == buttonNumber }) else {
+            buttonMappings.append(ButtonMapping(buttonNumber: buttonNumber, action: action))
+            buttonMappings.sort { $0.buttonNumber < $1.buttonNumber }
+            return
+        }
+
+        buttonMappings[index].action = action
     }
 }

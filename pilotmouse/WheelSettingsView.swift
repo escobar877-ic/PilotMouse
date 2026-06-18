@@ -8,9 +8,10 @@ struct WheelSettingsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Wheel")
                     .font(.headline)
-                Text("Adjust global scroll direction and speed. Smooth scrolling is prepared as UI for a later pass.")
+                Text("Adjust scroll direction and speed for non-continuous mouse wheel events. Trackpad scrolling is passed through unchanged.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Picker("Scroll direction", selection: scrollDirectionBinding) {
@@ -34,13 +35,19 @@ struct WheelSettingsView: View {
                 valueText: settingsStore.settings.horizontalScrollSpeed.multiplierText
             )
 
-            Toggle("Smooth scrolling", isOn: smoothScrollingBinding)
-            Text("Smooth scrolling is a placeholder until device-specific behavior can be tuned safely.")
+            HStack {
+                Text("Smooth scrolling")
+                Spacer()
+                Text("Native passthrough")
+                    .foregroundStyle(.secondary)
+            }
+            Text("MousePilot does not modify continuous scrolling, so trackpads and smooth mouse wheels keep their native macOS behavior.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Picker("Middle click behavior", selection: middleClickBinding) {
-                ForEach(MiddleClickBehavior.allCases) { behavior in
+                ForEach(MiddleClickBehavior.stableBehaviors) { behavior in
                     Text(behavior.displayName).tag(behavior)
                 }
             }
@@ -49,40 +56,34 @@ struct WheelSettingsView: View {
         }
         .padding(.top, 12)
         .padding(.horizontal, 4)
+        .background(AppColors.windowBackground)
     }
 
     private var scrollDirectionBinding: Binding<ScrollDirection> {
         Binding(
             get: { settingsStore.settings.scrollDirection },
-            set: { newValue in settingsStore.update { $0.scrollDirection = newValue } }
+            set: { settingsStore.setScrollDirection($0) }
         )
     }
 
     private var verticalSpeedBinding: Binding<Double> {
         Binding(
             get: { settingsStore.settings.verticalScrollSpeed },
-            set: { newValue in settingsStore.update { $0.verticalScrollSpeed = newValue } }
+            set: { settingsStore.setVerticalScrollSpeed($0) }
         )
     }
 
     private var horizontalSpeedBinding: Binding<Double> {
         Binding(
             get: { settingsStore.settings.horizontalScrollSpeed },
-            set: { newValue in settingsStore.update { $0.horizontalScrollSpeed = newValue } }
-        )
-    }
-
-    private var smoothScrollingBinding: Binding<Bool> {
-        Binding(
-            get: { settingsStore.settings.smoothScrollingEnabled },
-            set: { newValue in settingsStore.update { $0.smoothScrollingEnabled = newValue } }
+            set: { settingsStore.setHorizontalScrollSpeed($0) }
         )
     }
 
     private var middleClickBinding: Binding<MiddleClickBehavior> {
         Binding(
             get: { settingsStore.settings.middleClickBehavior },
-            set: { newValue in settingsStore.update { $0.middleClickBehavior = newValue } }
+            set: { settingsStore.setMiddleClickBehavior($0) }
         )
     }
 

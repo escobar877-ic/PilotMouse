@@ -4,84 +4,60 @@ struct SettingsView: View {
     @ObservedObject var settingsStore: SettingsStore
     @ObservedObject var permissionsManager: PermissionsManager
     @ObservedObject var mouseEventManager: MouseEventManager
+    @ObservedObject var pointerController: PointerController
+    @ObservedObject var themeManager: ThemeManager
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            header
+        VStack(spacing: 0) {
+            TopNavigationBarView(settingsStore: settingsStore)
 
-            TabView {
-                ButtonsSettingsView(settingsStore: settingsStore)
-                    .tabItem { Label("Buttons", systemImage: "computermouse") }
+            HeaderView(
+                settingsStore: settingsStore,
+                permissionsManager: permissionsManager,
+                mouseEventManager: mouseEventManager
+            )
 
-                WheelSettingsView(settingsStore: settingsStore)
-                    .tabItem { Label("Wheel", systemImage: "arrow.up.and.down") }
+            Divider()
 
-                PointerSettingsView(settingsStore: settingsStore)
-                    .tabItem { Label("Pointer", systemImage: "cursorarrow.motionlines") }
-
-                PermissionsView(permissionsManager: permissionsManager)
-                    .tabItem { Label("Permissions", systemImage: "lock.shield") }
-
-                AboutView()
-                    .tabItem { Label("About", systemImage: "info.circle") }
-            }
+            selectedContent
+                .padding(20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(AppColors.windowBackground)
         }
-        .padding(20)
-        .frame(minWidth: 620, minHeight: 520)
+        .frame(minWidth: 780, idealWidth: 860, maxWidth: .infinity, minHeight: 560, idealHeight: 640, maxHeight: .infinity)
+        .background(AppColors.windowBackground.ignoresSafeArea())
+        .ignoresSafeArea(.container, edges: .top)
+        .preferredColorScheme(settingsStore.settings.appTheme.colorScheme)
+        .id("theme-\(settingsStore.settings.appTheme.rawValue)")
         .onAppear {
             permissionsManager.refresh()
         }
     }
 
-    private var header: some View {
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("MousePilot")
-                    .font(.title2.bold())
-                Text("Local mouse customization for macOS")
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Toggle("Enabled", isOn: enabledBinding)
-                .toggleStyle(.switch)
-
-            statusBadge(
-                text: mouseEventManager.isRunning ? "Event tap active" : "Event tap stopped",
-                systemImage: mouseEventManager.isRunning ? "checkmark.circle.fill" : "pause.circle.fill",
-                color: mouseEventManager.isRunning ? .green : .secondary
-            )
-
-            statusBadge(
-                text: permissionsManager.isTrusted ? "Permission granted" : "Permission missing",
-                systemImage: permissionsManager.isTrusted ? "lock.open.fill" : "lock.trianglebadge.exclamationmark.fill",
-                color: permissionsManager.isTrusted ? .green : .orange
-            )
+    @ViewBuilder
+    private var selectedContent: some View {
+        switch settingsStore.settings.selectedTab {
+        case .buttons:
+            ButtonsSettingsView(settingsStore: settingsStore)
+        case .wheel:
+            WheelSettingsView(settingsStore: settingsStore)
+        case .pointer:
+            PointerSettingsView(settingsStore: settingsStore, pointerController: pointerController)
+        case .permissions:
+            PermissionsView(permissionsManager: permissionsManager)
+        case .about:
+            AboutView(settingsStore: settingsStore, pointerController: pointerController, themeManager: themeManager)
         }
-    }
-
-    private var enabledBinding: Binding<Bool> {
-        Binding(
-            get: { settingsStore.settings.isEnabled },
-            set: { settingsStore.setEnabled($0) }
-        )
-    }
-
-    private func statusBadge(text: String, systemImage: String, color: Color) -> some View {
-        Label(text, systemImage: systemImage)
-            .font(.caption)
-            .foregroundStyle(color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(color.opacity(0.12), in: Capsule())
     }
 }
 
 #Preview {
+    let permissionsManager = PermissionsManager()
     SettingsView(
         settingsStore: SettingsStore(),
-        permissionsManager: PermissionsManager(),
-        mouseEventManager: MouseEventManager(settings: .defaultSettings)
+        permissionsManager: permissionsManager,
+        mouseEventManager: MouseEventManager(settings: .defaultSettings, permissionsManager: permissionsManager),
+        pointerController: PointerController(),
+        themeManager: ThemeManager()
     )
 }
