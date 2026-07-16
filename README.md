@@ -1,89 +1,70 @@
 # MousePilot
 
-MousePilot is a local macOS mouse customization utility built with SwiftUI, AppKit, CoreGraphics, ApplicationServices, and IOKit.
+MousePilot is a local macOS mouse-customization utility built with SwiftUI, AppKit, CoreGraphics, ApplicationServices, and IOKit.
 
 ## Features
 
-- Compact menu bar app
-- Extra mouse button remapping
-- Back / Forward actions
-- Mission Control and Show Desktop
-- App Switcher, tab, window, copy, and paste actions
-- Mouse wheel direction and speed settings
-- Mouse-only pointer speed control
-- Windows-like pointer preset
-- System / Light / Dark appearance
-- Local settings persistence
-- No accounts
-- No subscription
-- No telemetry
+- Menu bar Start/Stop control and a single-instance settings app
+- Mouse buttons 1-32, all 16 modifier combinations, two-button chords, and button-plus-wheel chords
+- Click, navigation, Mission Control, Spaces, app/window/tab, media, shortcut, sequence, file/app/URL, and cursor-snap actions
+- Vertical and horizontal wheel sensitivity, direction, native acceleration, continuous-event control, and Auto Scroll
+- Independent mouse acceleration `0...99` and sensitivity `5...1990`
+- Application profiles and stable mouse profiles with application > device > global priority
+- Versioned JSON settings import/export and legacy-settings migration
+- System, Light, and Dark appearance
+- Local UserDefaults storage with no account, subscription, telemetry, or cloud service
 
 ## Requirements
 
-- macOS
-- Xcode
+- macOS 14 or later
 - Accessibility permission
-- Input Monitoring permission
+- Input Monitoring / direct HID listen permission
+- Event-posting access for configured keyboard, mouse, scroll, and media actions
+
+Magic Mouse, Magic Trackpad, and internal trackpads are deliberately excluded from mouse HID changes.
 
 ## Build
 
-1. Open the project in Xcode.
-2. Select the MousePilot target and My Mac run destination.
-3. For local development, disable App Sandbox if it is enabled.
-4. Build and run.
-5. Open MousePilot from its menu bar icon.
+```sh
+xcodebuild -project pilotmouse.xcodeproj -scheme MyApp -configuration Debug build
+```
 
-The settings window opens at `860x640` and cannot be resized below `780x560`.
+For a universal unsigned release artifact:
+
+```sh
+xcodebuild -project pilotmouse.xcodeproj -scheme MyApp -configuration Release \
+  ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build
+```
+
+The app is not sandboxed because active event suppression and mouse HID service properties are incompatible with the Mac App Store sandbox model.
 
 ## Permissions
 
-MousePilot uses macOS permissions only for its local mouse functionality:
+Grant the exact installed `MousePilot.app` under System Settings > Privacy & Security > Accessibility and Input Monitoring, then relaunch it. The Permissions tab reports Accessibility, Core Graphics, direct HID, and posting status separately.
 
-- Accessibility: posts configured keyboard shortcut actions.
-- Input Monitoring: listens for extra mouse button events.
+Ad-hoc builds do not have a stable signing identity. macOS may require a rebuilt binary to be removed and re-added to Privacy & Security. A Developer ID signature and notarization are required for stable distribution identity.
 
-Open System Settings -> Privacy & Security and enable MousePilot under Accessibility and Input Monitoring. Quit and relaunch MousePilot if macOS does not refresh permission status immediately.
+## Cursor Control
 
-## Pointer Control
+- Acceleration maps the SteerMouse `0...99` scale to `5 * (level / 99)^2`.
+- Sensitivity maps `5...1990` to `HIDPointerResolution = 2000 - sensitivity`; larger UI values are faster.
+- Writes are per external mouse HID service and are read back before success is reported.
+- A sensitivity change rewrites acceleration only when required to activate an accepted resolution change.
+- Partial failures roll back to the values immediately preceding that transaction.
+- Original system values are restored on disable and supported shutdown paths.
+- Known competing mouse utilities pause native writes. Repeated unknown resets stop after three retries to prevent periodic speed pulses.
 
-Pointer speed uses the IOHIDSystem mouse setting identified by `kIOHIDMouseAccelerationType`.
+## Profiles
 
-- The user-facing slider is `0...100`.
-- It maps through a smooth curve to HID values from `0.35` to `2.80`.
-- Changes apply with a short debounce.
-- Sticky reapply handles macOS or another utility overwriting the value.
-- Trackpad acceleration settings are never modified.
-- `mouseMoved` events and mouse delta fields are not intercepted or rewritten.
+Application profiles override device profiles, and device profiles override global settings. Device identity uses the serial number when available; otherwise it uses `VID:PID:transport`, so moving a receiver to another USB port does not lose its profile. Two identical serial-less mice intentionally share one model-level profile.
 
-Other mouse utilities may override the pointer value. Close them when testing MousePilot pointer control.
+## Scope
 
-## Menu Bar
-
-- Left click opens MousePilot.
-- Right click or Control-click opens the menu.
-- Start / Stop enables or disables event handling.
-- The status item uses a monochrome template SF Symbol and contains no text.
+MousePilot covers the main daily-use SteerMouse workflows, including held shortcut repetition, multi-target Open actions, automatic cursor snapping, and launch at login. It is not a binary-identical replacement: vendor-specific free-spin/ratchet modes, hardware sensor DPI, raw-only controls, and SteerMouse's cursor animation/return modes require device- or vendor-specific support and are not implemented. See [STEERMOUSE_PARITY.md](STEERMOUSE_PARITY.md) for the audited matrix and current verification state.
 
 ## Privacy
 
-MousePilot is local only:
-
-- No analytics
-- No telemetry
-- No network requests
-- No account
-- No keylogging
-- No click history
-- Settings stored locally in UserDefaults
-
-See [PRIVACY.md](PRIVACY.md) for details.
-
-## Known Limitations
-
-- Trackpad settings are not modified.
-- Pointer control depends on the macOS IOHIDSystem mouse setting.
-- Other mouse utilities may override pointer speed.
-- Launchpad, custom shortcuts, and application launching are not exposed as stable actions yet.
+MousePilot has no analytics, telemetry, account, cloud sync, or background network client. A user-configured Open URL action delegates that URL to macOS. See [PRIVACY.md](PRIVACY.md).
 
 ## License
 

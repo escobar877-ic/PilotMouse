@@ -5,15 +5,13 @@ import Combine
 final class MenuBarController: NSObject {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let settingsStore: SettingsStore
-    private let mouseEventManager: MouseEventManager
     private let settingsWindowController: SettingsWindowController
     private let menu = NSMenu()
     private let startStopItem = NSMenuItem()
     private var cancellables = Set<AnyCancellable>()
 
-    init(settingsStore: SettingsStore, mouseEventManager: MouseEventManager, settingsWindowController: SettingsWindowController) {
+    init(settingsStore: SettingsStore, settingsWindowController: SettingsWindowController) {
         self.settingsStore = settingsStore
-        self.mouseEventManager = mouseEventManager
         self.settingsWindowController = settingsWindowController
         super.init()
         configureStatusItem()
@@ -140,13 +138,6 @@ final class MenuBarController: NSObject {
     @objc private func toggleEnabled() {
         let enabled = !settingsStore.settings.isEnabled
         settingsStore.setEnabled(enabled)
-
-        if enabled {
-            mouseEventManager.start()
-        } else {
-            mouseEventManager.stop()
-        }
-
         updateStatusItemAppearance()
     }
 

@@ -17,7 +17,7 @@ struct TopNavigationBarView: View {
             }
             .labelsHidden()
             .pickerStyle(.segmented)
-            .frame(maxWidth: 520)
+            .frame(maxWidth: 640)
 
             Spacer(minLength: 12)
 

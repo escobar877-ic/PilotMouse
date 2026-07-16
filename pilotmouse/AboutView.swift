@@ -19,14 +19,14 @@ struct AboutView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("MousePilot")
                     .font(.largeTitle.bold())
-                Text("Version 0.1.0")
+                Text("Version \(versionText)")
                     .foregroundStyle(.secondary)
                 Text("Local mouse customization tool for macOS")
                     .font(.headline)
                     .padding(.top, 6)
             }
 
-            Text("Built for simple mouse button and scrolling customization without accounts, subscriptions, telemetry, profiles, or cloud sync.")
+            Text("Built for mouse buttons, scrolling, cursor control, and application profiles without accounts, subscriptions, telemetry, or cloud sync.")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -51,6 +51,28 @@ struct AboutView: View {
                 .frame(maxWidth: 320)
             }
 
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Launch MousePilot at login", isOn: launchAtLoginBinding)
+                    .toggleStyle(.switch)
+
+                if settingsStore.launchAtLoginRequiresApproval {
+                    Button {
+                        settingsStore.openLoginItemsSettings()
+                    } label: {
+                        Label("Open Login Items", systemImage: "gear")
+                    }
+                }
+
+                if let error = settingsStore.launchAtLoginError {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
             Text("Open-source ready: local settings, no network requests, no analytics, and no external dependencies.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -63,7 +85,6 @@ struct AboutView: View {
             }
             .confirmationDialog("Reset MousePilot settings?", isPresented: $showsResetConfirmation) {
                 Button("Reset Settings", role: .destructive) {
-                    pointerController.handlePointerControlEnabledChanged(false)
                     settingsStore.resetToDefaults()
                 }
                 Button("Cancel", role: .cancel) {}
@@ -76,6 +97,9 @@ struct AboutView: View {
         .padding(.top, 16)
         .padding(.horizontal, 4)
         .background(AppColors.windowBackground)
+        .onAppear {
+            settingsStore.refreshLaunchAtLoginStatus()
+        }
     }
 
     private var themeBinding: Binding<AppTheme> {
@@ -85,6 +109,19 @@ struct AboutView: View {
                 settingsStore.setAppTheme(theme)
                 themeManager.applyTheme(theme)
             }
+        )
+    }
+
+    private var versionText: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+        return build.isEmpty ? version : "\(version) (\(build))"
+    }
+
+    private var launchAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: { settingsStore.launchAtLoginEnabled },
+            set: { settingsStore.setLaunchAtLoginEnabled($0) }
         )
     }
 }

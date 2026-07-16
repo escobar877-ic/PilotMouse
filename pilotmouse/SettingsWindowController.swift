@@ -7,14 +7,18 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let permissionsManager: PermissionsManager
     private let mouseEventManager: MouseEventManager
     private let pointerController: PointerController
+    private let scrollController: ScrollController
+    private let mouseDeviceMonitor: MouseDeviceMonitor
     private let themeManager: ThemeManager
     private var window: NSWindow?
 
-    init(settingsStore: SettingsStore, permissionsManager: PermissionsManager, mouseEventManager: MouseEventManager, pointerController: PointerController, themeManager: ThemeManager) {
+    init(settingsStore: SettingsStore, permissionsManager: PermissionsManager, mouseEventManager: MouseEventManager, pointerController: PointerController, scrollController: ScrollController, mouseDeviceMonitor: MouseDeviceMonitor, themeManager: ThemeManager) {
         self.settingsStore = settingsStore
         self.permissionsManager = permissionsManager
         self.mouseEventManager = mouseEventManager
         self.pointerController = pointerController
+        self.scrollController = scrollController
+        self.mouseDeviceMonitor = mouseDeviceMonitor
         self.themeManager = themeManager
     }
 
@@ -27,6 +31,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 permissionsManager: permissionsManager,
                 mouseEventManager: mouseEventManager,
                 pointerController: pointerController,
+                scrollController: scrollController,
+                mouseDeviceMonitor: mouseDeviceMonitor,
                 themeManager: themeManager
             )
             let rootView = contentView

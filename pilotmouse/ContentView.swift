@@ -5,6 +5,8 @@ struct ContentView: View {
     @ObservedObject var permissionsManager: PermissionsManager
     @ObservedObject var mouseEventManager: MouseEventManager
     @ObservedObject var pointerController: PointerController
+    @ObservedObject var scrollController: ScrollController
+    @ObservedObject var mouseDeviceMonitor: MouseDeviceMonitor
     @ObservedObject var themeManager: ThemeManager
 
     var body: some View {
@@ -13,6 +15,8 @@ struct ContentView: View {
             permissionsManager: permissionsManager,
             mouseEventManager: mouseEventManager,
             pointerController: pointerController,
+            scrollController: scrollController,
+            mouseDeviceMonitor: mouseDeviceMonitor,
             themeManager: themeManager
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -27,6 +31,8 @@ struct ContentView: View {
         permissionsManager: permissionsManager,
         mouseEventManager: MouseEventManager(settings: .defaultSettings, permissionsManager: permissionsManager),
         pointerController: PointerController(),
+        scrollController: ScrollController(),
+        mouseDeviceMonitor: MouseDeviceMonitor(),
         themeManager: ThemeManager()
     )
 }
@@ -39,6 +45,8 @@ struct ContentView: View {
         permissionsManager: permissionsManager,
         mouseEventManager: MouseEventManager(settings: .defaultSettings, permissionsManager: permissionsManager),
         pointerController: PointerController(),
+        scrollController: ScrollController(),
+        mouseDeviceMonitor: MouseDeviceMonitor(),
         themeManager: ThemeManager()
     )
     .preferredColorScheme(.dark)

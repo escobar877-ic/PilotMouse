@@ -9,7 +9,7 @@ struct PermissionsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Permissions")
                         .font(.headline)
-                    Text("MousePilot needs Accessibility for shortcut actions and Input Monitoring for mouse event listening.")
+                    Text("MousePilot needs Accessibility and event access to listen for mouse input, suppress remapped buttons, and post selected actions.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -22,7 +22,7 @@ struct PermissionsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(permissionsManager.isTrusted ? "Permissions ready" : "Permissions missing")
                             .font(.headline)
-                        Text(permissionsManager.isTrusted ? "MousePilot can receive mouse events and trigger selected actions." : "Mouse button listening may work, but shortcut actions require Accessibility permission.")
+                        Text(permissionsManager.isTrusted ? "MousePilot can identify connected mice, receive events, and trigger selected actions." : "MousePilot needs Accessibility and direct mouse input access for all configured actions and device profiles.")
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -35,7 +35,9 @@ struct PermissionsView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     permissionRow("Accessibility", granted: permissionsManager.status.accessibilityTrusted)
-                    permissionRow("Listen for mouse events", granted: permissionsManager.status.listenEventAccess)
+                    permissionRow("Core Graphics event listening", granted: permissionsManager.status.listenEventAccess)
+                    permissionRow("Direct HID mouse input", granted: permissionsManager.status.hidListenEventAccess)
+                    permissionRow("Core Graphics event posting", granted: permissionsManager.status.postEventAccess)
                     permissionRow("Post shortcut actions", granted: permissionsManager.status.postShortcutActions)
                 }
                 .padding(12)
@@ -43,7 +45,7 @@ struct PermissionsView: View {
                 .background(AppColors.cardBackground, in: RoundedRectangle(cornerRadius: 8))
 
                 if !permissionsManager.isTrusted {
-                    Text("After changing permissions, quit and launch MousePilot again. If System Settings already shows MousePilot enabled, remove old MousePilot entries, reveal the current build, and add that exact app again.")
+                    Text("Permission status refreshes automatically. If System Settings already shows MousePilot enabled but direct HID access remains missing, remove old MousePilot entries, reveal the current build, add that exact app again, and relaunch it.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

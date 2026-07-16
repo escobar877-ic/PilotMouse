@@ -1,26 +1,30 @@
 import AppKit
-import ApplicationServices
+@preconcurrency import ApplicationServices
 import Combine
 import CoreGraphics
+import IOKit.hidsystem
 
 struct MousePilotPermissionStatus: Equatable {
     var accessibilityTrusted: Bool
     var listenEventAccess: Bool
+    var postEventAccess: Bool
+    var hidListenEventAccess: Bool
 
     var postShortcutActions: Bool {
-        accessibilityTrusted
+        postEventAccess
     }
 
     var canUseEventTap: Bool {
-        accessibilityTrusted || listenEventAccess
-    }
-
-    var canPostActions: Bool {
+        // MousePilot uses an active event tap so it can suppress remapped buttons.
         accessibilityTrusted
     }
 
+    var canPostActions: Bool {
+        postEventAccess
+    }
+
     var isReady: Bool {
-        canUseEventTap && canPostActions
+        canUseEventTap && hidListenEventAccess && canPostActions
     }
 }
 
@@ -28,7 +32,7 @@ struct MousePilotPermissionStatus: Equatable {
 final class PermissionsManager: ObservableObject {
     @Published private(set) var status: MousePilotPermissionStatus
 
-    var onTrustChanged: ((Bool) -> Void)?
+    var onStatusChanged: ((MousePilotPermissionStatus) -> Void)?
 
     var isTrusted: Bool {
         status.isReady
@@ -48,7 +52,7 @@ final class PermissionsManager: ObservableObject {
         self.status = Self.readStatus()
     }
 
-    deinit {
+    isolated deinit {
         refreshTimer?.invalidate()
     }
 
@@ -78,6 +82,7 @@ final class PermissionsManager: ObservableObject {
     func requestPermissionIfNeeded() {
         requestAccessibilityPermission()
         requestListenEventPermission()
+        requestPostEventPermission()
         refresh()
     }
 
@@ -87,8 +92,17 @@ final class PermissionsManager: ObservableObject {
     }
 
     func requestListenEventPermission() {
+        if IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) != kIOHIDAccessTypeGranted {
+            _ = IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+        }
         if !CGPreflightListenEventAccess() {
             _ = CGRequestListenEventAccess()
+        }
+    }
+
+    func requestPostEventPermission() {
+        if !CGPreflightPostEventAccess() {
+            _ = CGRequestPostEventAccess()
         }
     }
 
@@ -123,22 +137,20 @@ final class PermissionsManager: ObservableObject {
     }
 
     private func updateStatus(_ newStatus: MousePilotPermissionStatus) {
-        let wasTrusted = status.isReady
         guard newStatus != status else {
             return
         }
 
         status = newStatus
-
-        if wasTrusted != newStatus.isReady {
-            onTrustChanged?(newStatus.isReady)
-        }
+        onStatusChanged?(newStatus)
     }
 
     private static func readStatus() -> MousePilotPermissionStatus {
         MousePilotPermissionStatus(
             accessibilityTrusted: AXIsProcessTrusted(),
-            listenEventAccess: CGPreflightListenEventAccess()
+            listenEventAccess: CGPreflightListenEventAccess(),
+            postEventAccess: CGPreflightPostEventAccess(),
+            hidListenEventAccess: IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
         )
     }
 }
