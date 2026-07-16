@@ -17,4 +17,4 @@ MousePilot is a local-only utility:
 - No telemetry or analytics SDKs
 - No storage of keyboard input or click history
 
-MousePilot uses macOS Accessibility and Input Monitoring permissions only for configured mouse button listening and shortcut actions.
+MousePilot uses macOS Accessibility, Input Monitoring, and event-posting access only for configured mouse input handling and user-selected actions.

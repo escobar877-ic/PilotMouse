@@ -42,22 +42,25 @@ struct HeaderView: View {
                 .layoutPriority(2)
 
                 StatusBadgeView(
-                    title: mouseEventManager.isRunning ? "Tap active" : "Tap stopped",
+                    title: mouseEventManager.isRunning ? "Active" : "Stopped",
                     systemImage: mouseEventManager.isRunning ? "checkmark.circle.fill" : "pause.circle.fill",
                     style: mouseEventManager.isRunning ? .success : .neutral
                 )
+                .help(mouseEventManager.isRunning ? "Mouse event tap active" : "Mouse event tap stopped")
 
                 StatusBadgeView(
                     title: eventStatusTitle,
                     systemImage: mouseEventManager.lastErrorReason == nil ? "waveform.path.ecg" : "exclamationmark.triangle.fill",
                     style: mouseEventManager.lastErrorReason == nil ? .info : .warning
                 )
+                .help(mouseEventManager.lastErrorReason ?? mouseEventManager.lastEventDescription)
 
                 StatusBadgeView(
-                    title: permissionsManager.isTrusted ? "Permission ok" : "Permission missing",
+                    title: permissionsManager.isTrusted ? "Ready" : "Missing",
                     systemImage: permissionsManager.isTrusted ? "lock.open.fill" : "lock.trianglebadge.exclamationmark.fill",
                     style: permissionsManager.isTrusted ? .success : .warning
                 )
+                .help(permissionsManager.isTrusted ? "Required permissions granted" : "Required permissions missing")
             }
         }
         .padding(.horizontal, 20)
@@ -73,19 +76,19 @@ struct HeaderView: View {
     }
 
     private var eventStatusTitle: String {
-        if let lastErrorReason = mouseEventManager.lastErrorReason {
-            return lastErrorReason
+        if mouseEventManager.lastErrorReason != nil {
+            return "Blocked"
         }
 
         if mouseEventManager.lastEventDescription.localizedCaseInsensitiveContains("scroll") {
-            return "Scroll active"
+            return "Scroll"
         }
 
         if mouseEventManager.lastEventDescription.localizedCaseInsensitiveContains("button") {
-            return "Button input"
+            return "Button"
         }
 
-        return "Input ready"
+        return "Input"
     }
 }
 
