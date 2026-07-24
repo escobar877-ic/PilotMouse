@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1 - 2026-07-24
+
+- Fixed cursor and native wheel settings not applying on current macOS releases.
+- Replaced the restricted HID simple client with the full event-system client used by established mouse utilities.
+- Verified cursor and native wheel changes against live macOS HID filters on a physical USB mouse.
+
 ## 1.3.0 - 2026-07-16
 
 - Fixed stale delayed HID writes so an earlier sensitivity or acceleration change can no longer overwrite the latest setting.

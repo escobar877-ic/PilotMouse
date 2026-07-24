@@ -6,8 +6,8 @@ Reference: <https://plentycom.jp/en/steermouse/index.html>
 
 | Area | MousePilot status | Evidence and boundary |
 | --- | --- | --- |
-| Cursor acceleration `0...99` | Implemented, physical test pending | `MouseCursorMapper` uses `5 * (level / 99)^2`; HID readback and transactional rollback are implemented. |
-| Cursor sensitivity `5...1990` | Implemented, physical test pending | `HIDPointerResolution = 2000 - sensitivity`; the inverse display mapping and `2000.0` constant were verified in the installed SteerMouse 5.7.8 arm64 binary. Unchanged properties are not rewritten. |
+| Cursor acceleration `0...99` | Implemented, physical HID test passed | `MouseCursorMapper` uses `5 * (level / 99)^2`; the requested fixed-point value was accepted and read back on a physical USB mouse. |
+| Cursor sensitivity `5...1990` | Implemented, physical HID test passed | `HIDPointerResolution = 2000 - sensitivity`; values `1200` and `1900` produced live resolutions `800` and `100` on a physical USB mouse. |
 | Cursor lifecycle | Implemented | Original per-service values are captured and restored on disable, normal quit, SIGTERM, and SIGINT. SIGKILL and power loss cannot run cleanup. |
 | Driver conflict handling | Implemented | Known mouse utilities pause native writes; repeated unknown resets stop after three retries instead of causing speed pulses. |
 | Basic button mappings | Implemented for CGEvent-visible buttons 1-32 | Failed or unavailable actions pass the physical event through. Raw-only vendor controls remain unsupported. |
@@ -19,8 +19,8 @@ Reference: <https://plentycom.jp/en/steermouse/index.html>
 | Music control | Implemented for common controls | Volume, mute, play/pause, previous/next, and eject are present. Vendor-specific fine-volume behavior is not implemented. |
 | Open targets | Implemented | Up to 32 applications, files, or URLs can be assigned to one mapping and are opened in order. |
 | Cursor snapping | Broad coverage | Manual actions cover default, cancel, close, minimize, fullscreen, Dock, and screen center. Automatic snapping covers the five window controls and respects application > device > global settings. SteerMouse click/bounce/jump animation, return-to-origin, and arbitrary targets are not implemented. |
-| Wheel direction and sensitivity | Implemented, runtime pending | Vertical/horizontal event scaling, fractional remainder preservation, native-resolution compensation, trackpad passthrough, and full-range nonlinear UI controls are implemented. |
-| Wheel acceleration | Implemented, runtime pending | Native mouse scroll acceleration `0...20` is applied transactionally when the HID service accepts it. |
+| Wheel direction and sensitivity | Implemented, native HID test passed | Vertical/horizontal event scaling, fractional remainder preservation, native-resolution compensation, trackpad passthrough, and full-range nonlinear UI controls are implemented. A physical USB mouse accepted and reported the requested native wheel resolution. |
+| Wheel acceleration | Implemented, physical HID test passed | Native mouse scroll acceleration `0...20` is applied transactionally; a physical USB mouse accepted and reported both test and restored values. |
 | Auto Scroll | Implemented | Two-axis velocity scrolling, dead zone, Shift axis lock, indicator, and safe cancellation are present. |
 | Continuous wheel input | Implemented | Mouse continuous events are opt-in; unmatched trackpad events pass through unchanged. |
 | Application profiles | Implemented | Case-insensitive bundle matching; application settings override device and global settings. |
@@ -50,8 +50,9 @@ Completed checks:
 - Source parse and whitespace checks.
 - Apple IOHID source review for pointer-resolution and acceleration-filter behavior.
 - Installed SteerMouse 5.7.8 binary verification of the inverse sensitivity display mapping and its `2000.0` constant.
+- Installed MousePilot 1.3.1 verification against the live macOS pointer and scroll filters on a physical USB mouse, including changed values and restoration of the user's original settings.
 
 Still required before claiming a fully verified release:
 
-- Physical button, chord, wheel, Auto Scroll, cursor, hot-plug, wake, disable, and quit tests with Accessibility and Input Monitoring granted to the exact final app binary.
+- Physical button, chord, wheel-event scaling, Auto Scroll, hot-plug, wake, disable, and quit tests with Accessibility and Input Monitoring granted to the exact final app binary.
 - A Developer ID signature and notarization if permissions must survive upgrades without re-adding the app or the image will be distributed to other Macs.
