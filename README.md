@@ -49,6 +49,7 @@ Ad-hoc builds do not have a stable signing identity. macOS may require a rebuilt
 - Acceleration maps the SteerMouse `0...99` scale to `5 * (level / 99)^2`.
 - Sensitivity maps `5...1990` to `HIDPointerResolution = 2000 - sensitivity`; larger UI values are faster.
 - Writes are per external mouse HID service and are read back before success is reported.
+- The HID event-system connection supports dynamic per-device properties on current macOS releases.
 - A sensitivity change rewrites acceleration only when required to activate an accepted resolution change.
 - Partial failures roll back to the values immediately preceding that transaction.
 - Original system values are restored on disable and supported shutdown paths.
